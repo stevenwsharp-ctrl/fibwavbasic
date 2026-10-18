@@ -492,7 +492,7 @@ aurora:`vec4 mainLayer(vec2 p){
   return vec4(c,1.);
 }`};
 // remove lines the app adds itself (an AI shader sometimes repeats them)
-const cleanShader=code=>String(code||'').replace(/^\s*(#version|precision\s|uniform\s|out\s+vec4|in\s+vec|layout\s*\().*$/gm,'').replace(/void\s+main\s*\(\s*\)\s*\{[\s\S]*$/m,'').trim().slice(0,9000);
+const cleanShader=code=>String(code||'').replace(/^\s*(#version|precision\s|uniform\s|out\s+vec4|in\s+vec|layout\s*\().*$/gm,'').replace(/void\s+main\s*\(\s*\)\s*\{[\s\S]*$/m,'').trim().slice(0,14000);
 const BASE={key:'base',type:'bloom',...TYPES.bloom,opacity:.9,scale:1};
 const cleanLabel=s=>typeof s==='string'?s.replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40):'';
 
