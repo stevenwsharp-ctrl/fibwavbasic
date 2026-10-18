@@ -80,6 +80,33 @@ body.panel-open #ask{left:calc((100% - 380px)/2)}
 .how li::before{counter-increment:s;content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);color:var(--gold);display:grid;place-items:center;font-size:12px;font-weight:600}
 .how b{color:var(--fg);font-weight:500}
 .fine{font-size:12px;color:var(--dim);margin:16px 0 0}
+.search{display:flex;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:5px 5px 5px 14px}
+.search:focus-within{border-color:var(--gold)}
+.search input{flex:1;min-width:0;background:none;border:0;outline:none;font-size:16px;padding:9px 0}
+.search input::placeholder{color:var(--dim)}
+.search button{height:44px;padding:0 16px;border-radius:10px;border:0;background:var(--gold);color:#140e02;font-weight:600;display:inline-flex;align-items:center;gap:7px;flex:none}
+.search button svg{width:17px;height:17px}
+.hint2{font-size:12.5px;color:var(--dim);margin:8px 0 0}
+.or{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12.5px;margin:16px 0 12px}
+.or::before,.or::after{content:'';flex:1;height:1px;background:var(--line2)}
+.alt4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.alt4 button{height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--panel2);font-size:14px}
+.alt4 button:hover{border-color:var(--gold)}
+.alt4 button:disabled{opacity:.45;cursor:default}
+.h2{font:700 15px var(--display);letter-spacing:.1em;color:var(--gold);margin:2px 0 16px}
+#ytView .how{margin:0 0 18px}
+.linkbtn{display:inline-block;background:none;border:0;color:var(--gold);font-size:14px;padding:8px;margin-top:6px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.note{font-size:13px;color:var(--gold);text-align:left;margin:0 0 14px}
+
+/* YouTube player: always visible while it plays (YouTube does not allow a hidden player) */
+#player{position:fixed;left:max(14px,env(safe-area-inset-left));bottom:calc(122px + var(--safeB));width:300px;z-index:6;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;backdrop-filter:blur(10px)}
+#player.mini{width:200px}
+#player .bar{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px 4px 10px;font-size:12px;color:var(--dim)}
+#player .bar button{background:none;border:1px solid var(--line2);border-radius:6px;padding:2px 8px;font-size:12px;margin-left:4px}
+#player .bar button:hover{border-color:var(--gold)}
+#pConnect{color:var(--gold);border-color:var(--line)!important}
+#player iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+@media (max-width:900px){#player{bottom:auto;top:calc(60px + env(safe-area-inset-top));width:220px}#player.mini{width:150px}}
 
 /* stack panel */
 #stack{position:fixed;top:0;right:0;bottom:0;width:min(380px,100%);z-index:7;background:var(--panel);border-left:1px solid var(--line);backdrop-filter:blur(14px);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .35s ease;visibility:hidden}
@@ -171,21 +198,47 @@ body.panel-open #ask{left:calc((100% - 380px)/2)}
 
 <div id="welcome">
   <div class="card">
-    <h1>FIBWAVE</h1>
-    <p class="lead">Music you can see. Type an idea, and watch it appear.</p>
-    <button class="big" id="srcMic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg>Start with the microphone</button>
-    <div class="alt">
-      <button id="srcFile">Play a song file</button>
-      <button id="srcDemo">Try a demo beat</button>
+    <div id="pickView">
+      <h1>FIBWAVE</h1>
+      <p class="lead">Music you can see. Type an idea, and watch it appear.</p>
+      <form class="search" id="ytForm" autocomplete="off">
+        <input id="ytQ" maxlength="200" placeholder="What do you want to listen to?" aria-label="Search YouTube, or paste a YouTube link">
+        <button type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
+      </form>
+      <p class="hint2">Opens a YouTube search in a new tab. You can also paste a YouTube link.</p>
+      <div class="or">or</div>
+      <div class="alt4">
+        <button id="srcTab">Sound from another tab</button>
+        <button id="srcMic">Microphone</button>
+        <button id="srcFile">Song file</button>
+        <button id="srcDemo">Demo beat</button>
+      </div>
+      <ol class="how">
+        <li><span><b>Choose music:</b> search YouTube, use another tab, or use the microphone.</span></li>
+        <li><span><b>Type an idea</b>, for example “blue stars on the bass”.</span></li>
+        <li><span><b>Change your mind any time.</b> Remove one idea, or start again from a blank slate.</span></li>
+      </ol>
+      <p class="fine" id="privacy">The sound stays on your device.</p>
     </div>
-    <ol class="how">
-      <li><span><b>Play music</b> near your device, or choose a song file.</span></li>
-      <li><span><b>Type an idea</b>, for example “blue stars on the bass”.</span></li>
-      <li><span><b>Change your mind any time.</b> Remove one idea, or start again from a blank slate.</span></li>
-    </ol>
-    <p class="fine" id="privacy">The sound stays on your device.</p>
+    <div id="ytView" hidden>
+      <h2 class="h2">Pick a video</h2>
+      <ol class="how" id="ytSteps"></ol>
+      <button class="big" id="ytConnect">Connect the YouTube tab</button>
+      <a class="linkbtn" id="ytReopen" target="fibwave_youtube" rel="noopener">Open the YouTube search again</a>
+      <div class="or">or paste the video link</div>
+      <form class="search" id="ytPaste" autocomplete="off">
+        <input id="ytLink" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video link">
+        <button type="submit">Play here</button>
+      </form>
+      <button class="linkbtn" id="ytBack">Back</button>
+    </div>
   </div>
   <input type="file" id="fileIn" accept="audio/*" hidden>
+</div>
+
+<div id="player" hidden>
+  <div class="bar"><span>YouTube</span><span><button id="pConnect" hidden>Connect sound</button><button id="pMin">Smaller</button><button id="pClose" aria-label="Close the video">✕</button></span></div>
+  <iframe id="pFrame" title="YouTube video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 </div>
 
 <div id="toast" role="status"><span id="toastTx"></span><button id="toastBtn" hidden></button></div>
@@ -276,6 +329,84 @@ function useDemo(){
   AU.demo={stop(){clearInterval(tm);try{out.disconnect()}catch(e){}}};
   started('Demo beat');
 }
+/* ---------- sound from another tab (YouTube, Spotify, any site) ----------
+   The browser does not let a page hear another tab by itself. The person shares the tab once,
+   with "Share tab audio" on. This works in Chrome and Edge on a computer. */
+const CAN_SHARE=!!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia);
+const UA=navigator.userAgent;
+const TAB_AUDIO=CAN_SHARE&&!/Firefox\//.test(UA)&&!(/Safari\//.test(UA)&&!/Chrome|Chromium|Edg\//.test(UA));
+async function useTab(self){
+  if(!TAB_AUDIO){toast('This browser cannot share sound from a tab. Use Chrome or Edge on a computer, or use the microphone.');return false}
+  ensureAudio();
+  let ctl=null;try{if(typeof CaptureController!=='undefined')ctl=new CaptureController()}catch(e){ctl=null}
+  let s;
+  try{
+    s=await navigator.mediaDevices.getDisplayMedia({...(ctl?{controller:ctl}:{}),
+      video:{frameRate:{ideal:1,max:5},width:{ideal:320}},
+      audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false},
+      preferCurrentTab:!!self,selfBrowserSurface:self?'include':'exclude',systemAudio:'include',surfaceSwitching:'include'});
+    if(ctl){try{ctl.setFocusBehavior('no-focus-change')}catch(e){}}        // stay on Fibwave after sharing
+  }catch(e){toast('Tab sharing was cancelled.');return false}
+  if(!s.getAudioTracks().length){s.getTracks().forEach(t=>t.stop());toast('No sound came through. Share again, select the tab, and keep “Share tab audio” on.');return false}
+  const keepPlayer=!!self;
+  stopAudio();if(!keepPlayer)closePlayer();
+  AU.stream=s;AU.src=AU.ctx.createMediaStreamSource(new MediaStream(s.getAudioTracks()));AU.src.connect(AU.an);
+  s.getAudioTracks()[0].addEventListener('ended',()=>{if(AU.stream===s){stopAudio();$('soundLbl').textContent='Sound';$('pConnect').hidden=player.hidden;toast('Tab sharing stopped. Click Sound to connect again.')}});
+  $('pConnect').hidden=true;
+  started(self?'YouTube':'Shared tab');
+  return true;
+}
+
+/* ---------- YouTube: search in a new tab, or play a pasted link here ---------- */
+const player=$('player'),pFrame=$('pFrame');
+function parseYT(u){
+  u=(u||'').trim();const lh=u.lastIndexOf('http');if(lh>0)u=u.slice(lh);
+  const m=u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([\w-]{11})/i);
+  return m?m[1]:null;
+}
+function closePlayer(){if(!player.hidden){pFrame.src='about:blank';player.hidden=true}}
+async function playLink(id){
+  if(location.protocol==='file:'){toast('YouTube videos play only from a web address. Open Fibwave from your website, or run a local server.');return}
+  ensureAudio();
+  pFrame.src='https://www.youtube.com/embed/'+id+'?autoplay=1&playsinline=1&rel=0';
+  player.hidden=false;player.classList.remove('mini');$('pMin').textContent='Smaller';
+  if(!TAB_AUDIO){useMic();toast('This browser cannot share tab sound, so Fibwave listens with the microphone. Turn the volume up.');return}
+  if(AU.stream&&$('soundLbl').textContent==='YouTube'){closeWelcome();toast('Now playing your new video.');return}
+  closeWelcome();
+  const ok=await useTab(true);                          // share this tab, so Fibwave hears the video inside it
+  if(!ok)$('pConnect').hidden=false;
+}
+function ytSteps(){
+  const list=$('ytSteps');
+  if(TAB_AUDIO){
+    list.innerHTML='<li><span>In the <b>YouTube tab</b>, click a video. Let it play.</span></li>'+
+      '<li><span>Come back to this tab. Click <b>Connect the YouTube tab</b>.</span></li>'+
+      '<li><span>In the window that opens, select the YouTube tab. Keep <b>Share tab audio</b> on. Click <b>Share</b>.</span></li>';
+    $('ytConnect').hidden=false;
+  }else{
+    list.innerHTML='<li><span>In YouTube, find a video. Tap <b>Share</b>, then <b>Copy link</b>.</span></li>'+
+      '<li><span>Come back here. Paste the link below and tap <b>Play here</b>.</span></li>'+
+      '<li><span>This browser cannot share tab sound, so Fibwave listens with the <b>microphone</b>. Turn the volume up.</span></li>';
+    $('ytConnect').hidden=true;
+  }
+}
+function showYt(on){$('pickView').hidden=on;$('ytView').hidden=!on;if(on){ytSteps();$('ytConnect').focus()}}
+$('ytForm').addEventListener('submit',ev=>{
+  ev.preventDefault();const q=$('ytQ').value.trim();if(!q)return;
+  const id=parseYT(q);if(id){$('ytQ').value='';playLink(id);return}
+  const url='https://www.youtube.com/results?search_query='+encodeURIComponent(q);
+  $('ytReopen').href=url;
+  window.open(url,'fibwave_youtube','noopener');          // the same tab is used again for the next search
+  showYt(true);
+});
+$('ytConnect').onclick=()=>useTab(false);
+$('ytPaste').addEventListener('submit',ev=>{ev.preventDefault();const id=parseYT($('ytLink').value);if(!id){toast('That is not a YouTube video link. Use Share → Copy link in YouTube.');return}$('ytLink').value='';playLink(id)});
+$('ytBack').onclick=()=>showYt(false);
+$('pConnect').onclick=()=>useTab(true);
+$('pMin').onclick=()=>{player.classList.toggle('mini');$('pMin').textContent=player.classList.contains('mini')?'Bigger':'Smaller'};
+$('pClose').onclick=()=>{const wasYT=$('soundLbl').textContent==='YouTube';closePlayer();if(wasYT){stopAudio();$('soundLbl').textContent='Sound'}};
+if(!TAB_AUDIO){$('srcTab').disabled=true;$('srcTab').title='Use Chrome or Edge on a computer to share sound from a tab.'}
+
 function band(lo,hi){const hz=AU.ctx.sampleRate/AU.an.fftSize,a=Math.max(1,Math.floor(lo/hz)),b=Math.min(AU.freq.length-1,Math.ceil(hi/hz));let s=0;for(let i=a;i<=b;i++)s+=AU.freq[i];return s/((b-a+1)*255)}
 const SPN=96,SP=new Float32Array(SPN);
 function analyze(dt,t){
@@ -749,11 +880,12 @@ function loadShared(){
    ===================================================================== */
 const welcome=$('welcome');
 function closeWelcome(){welcome.hidden=true;poke()}
-$('srcMic').onclick=useMic;
-$('srcDemo').onclick=useDemo;
+$('srcMic').onclick=()=>{closePlayer();useMic()};
+$('srcDemo').onclick=()=>{closePlayer();useDemo()};
+$('srcTab').onclick=()=>useTab(false);
 $('srcFile').onclick=()=>$('fileIn').click();
-$('fileIn').onchange=e=>{useFile(e.target.files[0]);e.target.value=''};
-$('bSound').onclick=()=>{welcome.hidden=false};
+$('fileIn').onchange=e=>{closePlayer();useFile(e.target.files[0]);e.target.value=''};
+$('bSound').onclick=()=>{showYt(false);welcome.hidden=false;setTimeout(()=>$('ytQ').focus(),50)};
 welcome.addEventListener('click',e=>{if(e.target===welcome&&AU.live)closeWelcome()});
 $('bClear').onclick=blankSlate;
 $('bFull').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{})};
