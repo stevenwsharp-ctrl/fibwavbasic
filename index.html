@@ -523,7 +523,8 @@ function sanitizePart(p){
   }
   if(p.shader&&typeof p.shader==='object'&&typeof p.shader.code==='string'){
     const code=cleanShader(p.shader.code);
-    if(/vec4\s+mainLayer\s*\(/.test(code))out.shader={code,blend:p.shader.blend==='over'?'over':'add',opacity:typeof p.shader.opacity==='number'?clamp(p.shader.opacity,.1,1):1};
+    if(/vec4\s+mainLayer\s*\(/.test(code)){out.shader={code,blend:p.shader.blend==='over'?'over':'add',opacity:typeof p.shader.opacity==='number'?clamp(p.shader.opacity,.1,1):1};
+      if(typeof p.shader.replaces==='string'&&/^[a-z0-9]{4,20}$/.test(p.shader.replaces))out.shader.replaces=p.shader.replaces}
   }
   return out.mods||out.add||out.shader?out:null;
 }
@@ -543,6 +544,7 @@ let scene=null;
 function computeScene(){
   const S={hue:0,sat:0,bright:0,speed:1,spin:.06,zoom:1,trails:.35,glow:.3,pulse:.3,symmetry:1,palette:DEFAULT_PAL,background:'#000000',hideBase:false,elements:[],shaders:[]};
   const src=solo?stack.entries.filter(e=>e.id===solo):stack.entries.filter(e=>e.on);
+  const shMap=new Map();
   for(const e of src)for(const p of e.parts){
     if(!p.on)continue;const m=p.mods||{};
     if(m.hue!=null)S.hue+=m.hue;if(m.saturation!=null)S.sat+=m.saturation;if(m.brightness!=null)S.bright+=m.brightness;
@@ -550,8 +552,9 @@ function computeScene(){
     if(m.spin!=null)S.spin+=m.spin;if(m.trails!=null)S.trails+=m.trails;if(m.glow!=null)S.glow+=m.glow;if(m.pulse!=null)S.pulse+=m.pulse;
     if(m.symmetry!=null)S.symmetry=m.symmetry;if(m.palette)S.palette=m.palette;if(m.background)S.background=m.background;if(m.hideBase!=null)S.hideBase=m.hideBase;
     if(p.add)S.elements.push({...TYPES[p.add.type],opacity:.9,scale:1,...p.add,key:p.id});
-    if(p.shader&&!SH.broken.has(p.id))S.shaders.push({key:p.id,...p.shader,label:p.label});
+    if(p.shader&&!SH.broken.has(p.id)){if(p.shader.replaces)shMap.delete(p.shader.replaces);shMap.set(p.id,{key:p.id,...p.shader,label:p.label})}
   }
+  S.shaders=[...shMap.values()];
   S.speed=clamp(S.speed,.2,4);S.zoom=clamp(S.zoom,.4,2.5);S.spin=clamp(S.spin,-3,3);S.trails=clamp(S.trails,0,.9);S.glow=clamp(S.glow,0,1.2);S.pulse=clamp(S.pulse,0,1);
   S.bright=clamp(S.bright,-.6,.6);S.symmetry=clamp(S.symmetry|0,1,12);
   if(!S.hideBase)S.elements.unshift(BASE);
@@ -831,7 +834,8 @@ async function aiPost(path,body){
   return j;
 }
 async function askAI(text){
-  const j=await aiPost('/idea',{text,context:contextString()});
+  const scenes=(scene?scene.shaders:[]).slice(-3).map(s=>({id:s.key,label:s.label,code:s.code}));
+  const j=await aiPost('/idea',{text,context:contextString(),scenes});
   if(!j||!j.ok)throw new Error((j&&AI_ERR[j.error])||'The AI could not answer. Check the connection, then try again.');
   const res=j.result;res.cost=j.cost||1;
   if(res.shader){                                          // a new scene: check it here, ask the AI for one fix if it has an error
@@ -841,7 +845,7 @@ async function askAI(text){
     if(err){
       if(j.ticket)await aiPost('/refund',{ticket:j.ticket});
       res.sceneFailed=true;delete res.shader;
-    }else res.layers=(res.layers||[]).concat([{label:res.shader.label||'New scene',shader:{code,blend:res.shader.blend}}]);
+    }else res.layers=(res.layers||[]).concat([{label:res.shader.label||'New scene',shader:{code,blend:res.shader.blend,replaces:res.shader.replaces}}]);res.edited=!!res.shader.replaces;
   }
   return res;
 }
@@ -937,7 +941,7 @@ async function submitIdea(text){
     else{
       const e=addEntry(text,res);
       if(e){$('idea').value='';
-        let msg='Added #'+e.n+': '+e.label+(AI_URL&&res.cost>1?' (new scene, '+res.cost+' credits)':'');
+        let msg='Added #'+e.n+': '+e.label+(AI_URL&&res.cost>1?(res.edited?' (scene changed, '+res.cost+' credits; turn it off to go back)':' (new scene, '+res.cost+' credits)'):'');
         if(res.sceneFailed)msg+='. The new scene part did not work; most of its credits came back';
         if(!AI_URL&&res.missed)toast(msg+'. Offline mode knows a few words only; AI mode understands anything.','Undo',undo);
         else toast(msg,'Undo',undo);
