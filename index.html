@@ -450,6 +450,48 @@ const TYPES={
 const REACTS=['bass','mid','high','beat','all','none'];
 const MODR={hue:[-180,180],saturation:[-100,100],brightness:[-.5,.5],speed:[.25,3],spin:[-2,2],zoom:[.5,2],trails:[-.5,.5],glow:[-.5,1],pulse:[-.5,1],symmetry:[1,12]};
 const DEFAULT_PAL=['#f2b84b','#e8604c','#b04ddb','#3fa7d6','#7de2a6'];
+
+/* Built-in shader scenes (from the original Fibwave). The AI writes new ones in the same form:
+   one function, vec4 mainLayer(vec2 p), where p is the screen position (centre = 0, height = 1). */
+const BUILTIN={
+nebula:`vec4 mainLayer(vec2 p){
+  float t=uTime*.08;
+  vec2 q=p*1.6;
+  vec2 w=vec2(fbm(q+t),fbm(q+vec2(5.2,1.3)-t));
+  vec2 r=vec2(fbm(q+3.5*w+vec2(1.7,9.2)+.2*t),fbm(q+3.5*w+vec2(8.3,2.8)-.15*t));
+  float f=fbm(q+3.*r+uMid*.3);
+  float d=smoothstep(.35,1.1,f*f*1.8+length(r)*.3);
+  vec3 c=pal(f*1.2+length(w)*.5)*d*(.6+uBass*.8+uBeat*.3);
+  c+=pal(r.x+.4)*pow(length(r),4.)*.3;
+  c+=vec3(.9)*step(.997,hash(floor(p*300.)))*(.5+uHigh);
+  return vec4(c,1.);
+}`,
+tunnel:`vec4 mainLayer(vec2 p){
+  float r=max(length(p),.001),a=atan(p.y,p.x)/TAU+.5;
+  float z=.35/r+uTime*(.6+uBass*1.2);
+  float u=a+z*.03;
+  float l1=1.-smoothstep(.0,.06,abs(fract(u*13.+z*PHI)-.5));
+  float l2=1.-smoothstep(.0,.06,abs(fract(u*8.-z)-.5));
+  float ring=spec(fract(z*.05));
+  vec3 c=pal(fract(z*.02))*l1*(.3+ring*1.5)+pal(fract(z*.02)+.4)*l2*(.3+ring)*(1.+uBeat);
+  c*=smoothstep(0.,.25,r);
+  c+=pal(.1)*exp(-r*7.)*(.4+uBass);
+  return vec4(c,1.);
+}`,
+aurora:`vec4 mainLayer(vec2 p){
+  vec3 c=vec3(0.);
+  for(int i=0;i<5;i++){
+    float fi=float(i);
+    float y=p.y-.05*fi+.15*sin(p.x*2.+uTime*.3+fi)+.1*fbm(vec2(p.x*3.+uTime*.1,fi));
+    float b=exp(-abs(y)*(18.-uMid*8.));
+    float streak=.6+.4*sin(p.x*40.+uTime*2.+fi*3.);
+    c+=pal(fi*.18+p.x*.2)*b*streak*(.25+spec(fi/5.)*.9);
+  }
+  c+=vec3(.8,.85,1.)*step(.996,hash(floor(p*250.)))*(.3+uHigh)*smoothstep(-.1,.4,p.y);
+  return vec4(c,1.);
+}`};
+// remove lines the app adds itself (an AI shader sometimes repeats them)
+const cleanShader=code=>String(code||'').replace(/^\s*(#version|precision\s|uniform\s|out\s+vec4|in\s+vec|layout\s*\().*$/gm,'').replace(/void\s+main\s*\(\s*\)\s*\{[\s\S]*$/m,'').trim().slice(0,9000);
 const BASE={key:'base',type:'bloom',...TYPES.bloom,opacity:.9,scale:1};
 const cleanLabel=s=>typeof s==='string'?s.replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40):'';
 
@@ -478,7 +520,11 @@ function sanitizePart(p){
     if(a.type==='rain'&&['drops','snow'].includes(a0.style))a.style=a0.style;
     out.add=a;
   }
-  return out.mods||out.add?out:null;
+  if(p.shader&&typeof p.shader==='object'&&typeof p.shader.code==='string'){
+    const code=cleanShader(p.shader.code);
+    if(/vec4\s+mainLayer\s*\(/.test(code))out.shader={code,blend:p.shader.blend==='over'?'over':'add',opacity:typeof p.shader.opacity==='number'?clamp(p.shader.opacity,.1,1):1};
+  }
+  return out.mods||out.add||out.shader?out:null;
 }
 
 /* =====================================================================
@@ -494,7 +540,7 @@ const byId=id=>stack.entries.find(e=>e.id===id);
 
 let scene=null;
 function computeScene(){
-  const S={hue:0,sat:0,bright:0,speed:1,spin:.06,zoom:1,trails:.35,glow:.3,pulse:.3,symmetry:1,palette:DEFAULT_PAL,background:'#000000',hideBase:false,elements:[]};
+  const S={hue:0,sat:0,bright:0,speed:1,spin:.06,zoom:1,trails:.35,glow:.3,pulse:.3,symmetry:1,palette:DEFAULT_PAL,background:'#000000',hideBase:false,elements:[],shaders:[]};
   const src=solo?stack.entries.filter(e=>e.id===solo):stack.entries.filter(e=>e.on);
   for(const e of src)for(const p of e.parts){
     if(!p.on)continue;const m=p.mods||{};
@@ -503,6 +549,7 @@ function computeScene(){
     if(m.spin!=null)S.spin+=m.spin;if(m.trails!=null)S.trails+=m.trails;if(m.glow!=null)S.glow+=m.glow;if(m.pulse!=null)S.pulse+=m.pulse;
     if(m.symmetry!=null)S.symmetry=m.symmetry;if(m.palette)S.palette=m.palette;if(m.background)S.background=m.background;if(m.hideBase!=null)S.hideBase=m.hideBase;
     if(p.add)S.elements.push({...TYPES[p.add.type],opacity:.9,scale:1,...p.add,key:p.id});
+    if(p.shader&&!SH.broken.has(p.id))S.shaders.push({key:p.id,...p.shader,label:p.label});
   }
   S.speed=clamp(S.speed,.2,4);S.zoom=clamp(S.zoom,.4,2.5);S.spin=clamp(S.spin,-3,3);S.trails=clamp(S.trails,0,.9);S.glow=clamp(S.glow,0,1.2);S.pulse=clamp(S.pulse,0,1);
   S.bright=clamp(S.bright,-.6,.6);S.symmetry=clamp(S.symmetry|0,1,12);
